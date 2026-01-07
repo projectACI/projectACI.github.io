@@ -1,0 +1,723 @@
+<!DOCTYPE html>
+<html lang="ru">
+<head>
+  <meta charset="UTF-8" />
+  <title>zerosum0x0 — Low‑Level & Security</title>
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <meta name="description" content="zerosum0x0 — low-level engineer, reverse engineering, security research." />
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;700&display=swap" rel="stylesheet" />
+  <style>
+    :root {
+      --bg: #050509;
+      --bg-elevated: #0c0c12;
+      --accent: #6c5ce7;
+      --accent-soft: rgba(108, 92, 231, 0.2);
+      --text: #f5f5f7;
+      --text-muted: #a0a0b4;
+      --border-subtle: #1c1c28;
+      --danger: #ff7675;
+    }
+
+    * {
+      box-sizing: border-box;
+      margin: 0;
+      padding: 0;
+    }
+
+    html, body {
+      height: 100%;
+      background: radial-gradient(circle at top, #131327 0, #050509 55%, #020206 100%);
+      color: var(--text);
+      font-family: "Inter", system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
+      scroll-behavior: smooth;
+    }
+
+    body {
+      display: flex;
+      flex-direction: column;
+    }
+
+    a {
+      color: inherit;
+      text-decoration: none;
+    }
+
+    a:hover {
+      color: var(--accent);
+    }
+
+    .page {
+      max-width: 960px;
+      width: 100%;
+      margin: 0 auto;
+      padding: 24px 16px 48px;
+    }
+
+    header {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      margin-bottom: 40px;
+      position: sticky;
+      top: 0;
+      z-index: 10;
+      backdrop-filter: blur(12px);
+      background: linear-gradient(to bottom, rgba(5,5,9,0.92), rgba(5,5,9,0.7), transparent);
+      border-bottom: 1px solid rgba(108, 92, 231, 0.15);
+      padding-bottom: 8px;
+    }
+
+    .brand {
+      display: flex;
+      align-items: center;
+      gap: 10px;
+    }
+
+    .brand-mark {
+      width: 28px;
+      height: 28px;
+      border-radius: 8px;
+      background: radial-gradient(circle at 30% 20%, #ffffff 0, #6c5ce7 30%, #2d1b69 70%, transparent 100%);
+      box-shadow: 0 0 18px rgba(108,92,231,0.7);
+    }
+
+    .brand-main {
+      font-weight: 700;
+      letter-spacing: 0.06em;
+      text-transform: lowercase;
+      font-size: 1rem;
+    }
+
+    .brand-sub {
+      font-size: 0.75rem;
+      color: var(--text-muted);
+    }
+
+    nav {
+      display: flex;
+      gap: 16px;
+      font-size: 0.85rem;
+      text-transform: uppercase;
+      letter-spacing: 0.12em;
+      color: var(--text-muted);
+    }
+
+    nav a {
+      padding: 4px 0;
+      position: relative;
+    }
+
+    nav a::after {
+      content: "";
+      position: absolute;
+      left: 0;
+      bottom: -4px;
+      width: 0;
+      height: 1px;
+      background: var(--accent);
+      transition: width 0.25s ease;
+    }
+
+    nav a:hover::after {
+      width: 100%;
+    }
+
+    main {
+      flex: 1;
+    }
+
+    .hero {
+      display: grid;
+      grid-template-columns: minmax(0, 2.2fr) minmax(0, 1.8fr);
+      gap: 24px;
+      margin-top: 24px;
+      margin-bottom: 40px;
+      align-items: center;
+    }
+
+    .hero-title {
+      font-size: clamp(2.2rem, 4vw, 2.8rem);
+      font-weight: 700;
+      letter-spacing: 0.06em;
+      text-transform: lowercase;
+      margin-bottom: 12px;
+    }
+
+    .hero-role {
+      font-size: 0.95rem;
+      text-transform: uppercase;
+      letter-spacing: 0.18em;
+      color: var(--text-muted);
+      margin-bottom: 16px;
+    }
+
+    .hero-text {
+      font-size: 0.98rem;
+      line-height: 1.7;
+      color: var(--text);
+      max-width: 36rem;
+    }
+
+    .hero-highlight {
+      color: var(--accent);
+      font-weight: 500;
+    }
+
+    .hero-tagline {
+      margin-top: 14px;
+      font-size: 0.9rem;
+      color: var(--text-muted);
+    }
+
+    .hero-card {
+      background: linear-gradient(135deg, rgba(108,92,231,0.08), rgba(10,10,18,0.9));
+      border-radius: 16px;
+      border: 1px solid rgba(108, 92, 231, 0.25);
+      padding: 18px 18px 16px;
+      box-shadow:
+        0 18px 45px rgba(0, 0, 0, 0.8),
+        0 0 40px rgba(108,92,231,0.25);
+      position: relative;
+      overflow: hidden;
+    }
+
+    .hero-card::before {
+      content: "";
+      position: absolute;
+      inset: -40%;
+      background:
+        radial-gradient(circle at 0% 0%, rgba(108,92,231,0.3) 0, transparent 55%),
+        radial-gradient(circle at 100% 100%, rgba(255, 118, 117, 0.23) 0, transparent 58%);
+      opacity: 0.45;
+      mix-blend-mode: screen;
+    }
+
+    .hero-card-inner {
+      position: relative;
+      z-index: 1;
+      display: flex;
+      flex-direction: column;
+      gap: 10px;
+    }
+
+    .hero-name {
+      font-size: 1.12rem;
+      font-weight: 600;
+      letter-spacing: 0.12em;
+      text-transform: uppercase;
+    }
+
+    .hero-meta {
+      font-size: 0.8rem;
+      color: var(--text-muted);
+    }
+
+    .hero-pills {
+      display: flex;
+      flex-wrap: wrap;
+      gap: 6px;
+      margin-top: 8px;
+      margin-bottom: 10px;
+    }
+
+    .pill {
+      border-radius: 999px;
+      border: 1px solid rgba(255,255,255,0.08);
+      padding: 4px 10px;
+      font-size: 0.7rem;
+      text-transform: uppercase;
+      letter-spacing: 0.16em;
+      color: var(--text-muted);
+      background: rgba(3, 4, 8, 0.7);
+      backdrop-filter: blur(6px);
+    }
+
+    .hero-status {
+      display: flex;
+      align-items: center;
+      gap: 6px;
+      font-size: 0.78rem;
+      color: var(--text-muted);
+    }
+
+    .hero-dot {
+      width: 8px;
+      height: 8px;
+      border-radius: 50%;
+      background: radial-gradient(circle, #55efc4 0, #00b894 40%, transparent 70%);
+      box-shadow: 0 0 12px rgba(85, 239, 196, 0.9);
+    }
+
+    .hero-footer {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      margin-top: 14px;
+      font-size: 0.76rem;
+      color: var(--text-muted);
+    }
+
+    .hero-footer span span {
+      color: var(--accent);
+    }
+
+    .hero-links {
+      display: flex;
+      gap: 10px;
+    }
+
+    .hero-link-chip {
+      border-radius: 999px;
+      border: 1px solid rgba(255,255,255,0.1);
+      padding: 4px 10px;
+      font-size: 0.72rem;
+      text-transform: uppercase;
+      letter-spacing: 0.18em;
+      color: var(--text-muted);
+      background: rgba(5, 5, 12, 0.85);
+    }
+
+    section {
+      margin-bottom: 40px;
+    }
+
+    .section-label {
+      font-size: 0.75rem;
+      text-transform: uppercase;
+      letter-spacing: 0.18em;
+      color: var(--text-muted);
+      margin-bottom: 8px;
+    }
+
+    .section-title {
+      font-size: 1.1rem;
+      font-weight: 600;
+      margin-bottom: 16px;
+    }
+
+    .section-text {
+      font-size: 0.95rem;
+      line-height: 1.7;
+      color: var(--text-muted);
+      max-width: 46rem;
+    }
+
+    .grid-two {
+      display: grid;
+      grid-template-columns: minmax(0, 1.4fr) minmax(0, 1.6fr);
+      gap: 24px;
+    }
+
+    .card {
+      background: rgba(7, 7, 14, 0.98);
+      border-radius: 16px;
+      border: 1px solid var(--border-subtle);
+      padding: 18px 18px 16px;
+      box-shadow: 0 12px 30px rgba(0, 0, 0, 0.8);
+      position: relative;
+      overflow: hidden;
+    }
+
+    .card::before {
+      content: "";
+      position: absolute;
+      inset: -30%;
+      background: radial-gradient(circle at 0 0, rgba(108,92,231,0.2) 0, transparent 50%);
+      opacity: 0.4;
+      mix-blend-mode: screen;
+    }
+
+    .card-inner {
+      position: relative;
+      z-index: 1;
+    }
+
+    .card-title {
+      font-size: 0.95rem;
+      font-weight: 600;
+      margin-bottom: 10px;
+    }
+
+    .skills-list {
+      list-style: none;
+      display: grid;
+      gap: 6px;
+      font-size: 0.9rem;
+    }
+
+    .skills-list li {
+      display: flex;
+      align-items: baseline;
+      gap: 6px;
+      color: var(--text-muted);
+    }
+
+    .skills-list li::before {
+      content: "›";
+      color: var(--accent);
+      font-size: 0.8rem;
+      margin-top: 1px;
+    }
+
+    .projects-grid {
+      display: grid;
+      grid-template-columns: minmax(0, 1fr);
+      gap: 14px;
+    }
+
+    .project {
+      border-radius: 12px;
+      border: 1px solid var(--border-subtle);
+      padding: 10px 12px;
+      background: radial-gradient(circle at 0 0, rgba(108,92,231,0.12) 0, rgba(7,7,14,0.95) 52%);
+    }
+
+    .project-name {
+      font-size: 0.92rem;
+      font-weight: 500;
+      margin-bottom: 4px;
+      letter-spacing: 0.04em;
+      text-transform: uppercase;
+      color: var(--accent);
+    }
+
+    .project-desc {
+      font-size: 0.88rem;
+      color: var(--text-muted);
+      line-height: 1.6;
+    }
+
+    .contact-grid {
+      display: grid;
+      grid-template-columns: minmax(0, 1.4fr) minmax(0, 1.6fr);
+      gap: 24px;
+    }
+
+    .contact-list {
+      list-style: none;
+      font-size: 0.9rem;
+      display: grid;
+      gap: 8px;
+    }
+
+    .contact-label {
+      font-size: 0.78rem;
+      text-transform: uppercase;
+      letter-spacing: 0.16em;
+      color: var(--text-muted);
+    }
+
+    .contact-value {
+      font-size: 0.92rem;
+      color: var(--text);
+    }
+
+    .contact-note {
+      font-size: 0.86rem;
+      color: var(--text-muted);
+      line-height: 1.6;
+    }
+
+    footer {
+      margin-top: 20px;
+      padding-top: 16px;
+      border-top: 1px solid rgba(255,255,255,0.06);
+      font-size: 0.78rem;
+      color: var(--text-muted);
+      display: flex;
+      justify-content: space-between;
+      gap: 12px;
+      flex-wrap: wrap;
+    }
+
+    footer span span {
+      color: var(--danger);
+    }
+
+    /* simple reveal animation */
+    .reveal {
+      opacity: 0;
+      transform: translateY(16px);
+      transition: opacity 0.6s ease-out, transform 0.6s ease-out;
+    }
+
+    .reveal.visible {
+      opacity: 1;
+      transform: translateY(0);
+    }
+
+    @media (max-width: 768px) {
+      header {
+        flex-direction: column;
+        align-items: flex-start;
+        gap: 10px;
+      }
+
+      .hero {
+        grid-template-columns: minmax(0, 1fr);
+      }
+
+      .grid-two,
+      .contact-grid {
+        grid-template-columns: minmax(0, 1fr);
+      }
+
+      .page {
+        padding: 16px 14px 32px;
+      }
+
+      nav {
+        gap: 12px;
+        font-size: 0.8rem;
+      }
+    }
+
+    @media (max-width: 480px) {
+      .hero-card {
+        margin-top: 4px;
+      }
+
+      .hero-title {
+        font-size: 1.9rem;
+      }
+    }
+  </style>
+</head>
+<body>
+  <div class="page">
+    <header>
+      <div class="brand">
+        <div class="brand-mark" aria-hidden="true"></div>
+        <div>
+          <div class="brand-main">zerosum0x0</div>
+          <div class="brand-sub">low‑level & security research</div>
+        </div>
+      </div>
+      <nav>
+        <a href="#about">about</a>
+        <a href="#skills">skills</a>
+        <a href="#projects">projects</a>
+        <a href="#contact">contact</a>
+      </nav>
+    </header>
+
+    <main>
+      <section class="hero reveal" id="about">
+        <div>
+          <div class="hero-role">low‑level engineering • reverse engineering • security research</div>
+          <h1 class="hero-title">вижу системы иначе</h1>
+          <p class="hero-text">
+            Я работаю там, где важны глубина, точность и понимание систем на уровне байтов.
+            Меня интересуют архитектуры, которые другие считают слишком сложными, и задачи,
+            которые требуют инженерного мышления, а не шаблонных решений.
+            <br /><br />
+            Моя специализация — <span class="hero-highlight">низкоуровневая разработка, реверс‑инжиниринг,
+            исследование поведения программ</span> и создание инструментов для анализа безопасности.
+            Я не гонюсь за хайпом — я строю фундамент.
+          </p>
+          <p class="hero-tagline">
+            От абстракций к железу: понимание систем сверху вниз и снизу вверх.
+          </p>
+        </div>
+        <aside class="hero-card">
+          <div class="hero-card-inner">
+            <div>
+              <div class="hero-name">zerosum0x0</div>
+              <div class="hero-meta">engineer • reverse engineering • security research</div>
+            </div>
+            <div class="hero-pills">
+              <span class="pill">low‑level</span>
+              <span class="pill">reverse engineering</span>
+              <span class="pill">os internals</span>
+              <span class="pill">tooling</span>
+            </div>
+            <div class="hero-status">
+              <span class="hero-dot"></span>
+              <span>в сети, занимаюсь системами и их границами</span>
+            </div>
+            <div class="hero-footer">
+              <span>фокус: <span>структуры, потоки, взаимодействия</span></span>
+              <div class="hero-links">
+                <a class="hero-link-chip" href="#projects">work</a>
+                <a class="hero-link-chip" href="https://github.com/projectACI" target="_blank" rel="noopener">github</a>
+              </div>
+            </div>
+          </div>
+        </aside>
+      </section>
+
+      <section class="reveal" id="skills">
+        <div class="section-label">skills</div>
+        <h2 class="section-title">Технический профиль</h2>
+        <div class="grid-two">
+          <p class="section-text">
+            Мой стек — это сочетание низкоуровневой разработки, понимания внутренних механизмов операционных систем
+            и системного анализа. Я комфортно чувствую себя там, где большинство инструментов перестают быть
+            «чёрным ящиком», а начинают раскладываться на понятные примитивы.
+          </p>
+          <div class="card">
+            <div class="card-inner">
+              <h3 class="card-title">Ключевые направления</h3>
+              <ul class="skills-list">
+                <li>Reverse Engineering (x86/x64, ARM), анализ бинарей и поведения</li>
+                <li>Low‑Level Development (C, C++, Rust), работа с памятью и системными вызовами</li>
+                <li>Windows Internals / Linux Internals, процессы, драйверы, IPC</li>
+                <li>Static & Dynamic Analysis для исследований и аудита безопасности</li>
+                <li>Memory Forensics, анализ состояния систем на низком уровне</li>
+                <li>Driver Development и взаимодействие с ядром</li>
+                <li>Network Protocol Analysis и поиск аномалий</li>
+                <li>Automation & Tooling (Python, Go), собственные инструменты</li>
+                <li>Build Systems & CI/CD, устойчивые цепочки сборки</li>
+                <li>Threat Modeling & Attack Surface Mapping</li>
+              </ul>
+            </div>
+          </div>
+        </div>
+      </section>
+
+      <section class="reveal" id="projects">
+        <div class="section-label">projects</div>
+        <h2 class="section-title">Инструменты и исследования</h2>
+        <div class="grid-two">
+          <p class="section-text">
+            Я предпочитаю проекты, которые раскрывают внутреннюю структуру систем: как приложения взаимодействуют
+            с ядром, как процессы и потоки формируют поведение, как сеть и память отражают состояние системы.
+            Ниже — несколько направлений, в которых я работаю.
+          </p>
+          <div class="projects-grid">
+            <article class="project">
+              <div class="project-name">ByteTrace</div>
+              <div class="project-desc">
+                Инструмент для изучения поведения приложений через системные вызовы.
+                Позволяет увидеть, что на самом деле происходит за уровнем высокоуровневого API.
+              </div>
+            </article>
+            <article class="project">
+              <div class="project-name">GhostMap</div>
+              <div class="project-desc">
+                Визуализатор процессов и потоков в реальном времени. Делает структуру системы
+                читаемой и наглядной, вместо набора абстрактных PID и дескрипторов.
+              </div>
+            </article>
+            <article class="project">
+              <div class="project-name">KernelScope</div>
+              <div class="project-desc">
+                Фреймворк для исследования взаимодействия драйверов и ядра. Для случаев, когда
+                документации недостаточно, а нужно видеть реальную картину.
+              </div>
+            </article>
+            <article class="project">
+              <div class="project-name">RedVision</div>
+              <div class="project-desc">
+                Набор утилит для анализа сетевых протоколов и выявления аномалий. Фокус на точности
+                и прозрачности того, что происходит «по проводу».
+              </div>
+            </article>
+            <article class="project">
+              <div class="project-name">ObsidianLab</div>
+              <div class="project-desc">
+                Лаборатория для тестирования гипотез в области архитектуры и безопасности ПО.
+                Пространство для экспериментов с идеями до того, как они станут продуктами.
+              </div>
+            </article>
+          </div>
+        </div>
+      </section>
+
+     <section class="reveal" id="contact">
+  <div class="section-label">contact</div>
+  <h2 class="section-title">Контакт и присутствие</h2>
+
+  <div class="contact-grid">
+    <div>
+      <p class="contact-note">
+        Я открыт к диалогу там, где есть смысл говорить о системах, архитектуре и сложных задачах.
+        Если вам близок такой подход — вы знаете, как связаться.
+      </p>
+    </div>
+
+    <div class="card">
+      <div class="card-inner">
+        <ul class="contact-list">
+          <li>
+            <div class="contact-label">email</div>
+            <div class="contact-value">
+              <a href="mailto:projectACI@proton.me">projectACI@proton.me</a>
+            </div>
+          </li>
+
+          <li>
+            <div class="contact-label">github</div>
+            <div class="contact-value">
+              <a href="https://github.com/projectACI" target="_blank" rel="noopener">
+                github.com/projectACI
+              </a>
+            </div>
+          </li>
+
+          <li>
+            <div class="contact-label">telegram</div>
+            <div class="contact-value">@FJX0x1</div>
+          </li>
+
+          <li>
+            <div class="contact-label">pgp key</div>
+            <pre class="contact-value" style="
+              white-space: pre-wrap;
+              font-size: 0.75rem;
+              background: rgba(255,255,255,0.03);
+              padding: 10px;
+              border-radius: 8px;
+              border: 1px solid rgba(255,255,255,0.08);
+              overflow-x: auto;
+            ">
+-----BEGIN PGP PUBLIC KEY BLOCK-----
+
+mDMEZW42RRYJKwYBBAHaRw8BAQdAtqEdOfKB2h6sZJ3MfugZxRWc0DM+z+hrFhYG
++7G6Fbm0CnByb2plY3RBQ0mImQQTFgoAQRYhBEZHtkJWJymeCVAh5JQo2hqQ/Pu/
+BQJlbjZFAhsjBQkFpErLBQsJCAcCAiICBhUKCQgLAgQWAgMBAh4HAheAAAoJEJQo
+2hqQ/Pu/UGkA/iu1TV02zC8jJ4b+OISuSGwUBZM4K8r8pNqAQLOQCIzXAP9j3/38
+LJ0LHF04qG+IFxT7D6jcmrP6y3EYeMwIOZwLD7g4BGVuNkUSCisGAQQBl1UBBQEB
+B0BCEIxgT87HoWvvGKcEzcC4p1lsyuW4rq56n7IhPQZYOwMBCAeIfgQYFgoAJhYh
+BEZHtkJWJymeCVAh5JQo2hqQ/Pu/BQJlbjZFAhsMBQkFpErLAAoJEJQo2hqQ/Pu/
+PxgBALyB2a1JQ5rHpeHP5Aj06a5ZtcGBioO0GcYbiYaqVlW3AP0Taisho6+4Rj1C
+L/hr076OAIUwqHEEg3K1c/Wg/wLJCQ==
+=pdKK
+-----END PGP PUBLIC KEY BLOCK-----
+            </pre>
+          </li>
+        </ul>
+      </div>
+    </div>
+  </div>
+</section>
+
+    </main>
+
+    <footer>
+      <span>© 2026 <span>zerosum0x0</span></span>
+      <span>from abstractions to bytes.</span>
+    </footer>
+  </div>
+
+  <script>
+    const revealEls = document.querySelectorAll(".reveal");
+
+    const observer = new IntersectionObserver(
+      (entries) => {
+        entries.forEach((entry) => {
+          if (entry.isIntersecting) {
+            entry.target.classList.add("visible");
+            observer.unobserve(entry.target);
+          }
+        });
+      },
+      { threshold: 0.15 }
+    );
+
+    revealEls.forEach((el) => observer.observe(el));
+  </script>
+</body>
+</html>
+
+
